@@ -19,6 +19,8 @@
 
 //	各个数据的宽度
 unsigned int w_nlink,w_uid,w_gid,w_size,w_time,w_name;
+//	是否为长输出
+unsigned int isLong = 1;
 
 struct Filelist
 {
@@ -117,7 +119,8 @@ int readFile(const char *path)
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
 		strncpy(files[fileNum]->name,ptr->d_name,length);
-		readAll(path,files[fileNum]->name,fileNum);			//读写其他文件属性数据
+		if(isLong)
+			readAll(path,files[fileNum]->name,fileNum);			//读写其他文件属性数据
 		++fileNum;
 		sum = fileNum * sizeof(char*);
 		if( fileNum >= maxNum/2 )				//使结构体组指针内存空间翻倍
@@ -153,11 +156,15 @@ int simple_print()
 	int i;
 	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
-		printf("%s\n",files[i]->name);
-		free(files[i]->permission);
+		printf("%-*s",w_name+2,files[i]->name);
 		free(files[i]->name);
+//		free(files[i]->permission);
 		free(files[i]);
+		if( (i+1)%10==0 )
+			printf("\n");
 	}
+	if( i % 10 != 0 )
+		printf("\n");
 	return 0;
 }
 
@@ -166,27 +173,23 @@ int main(int argc, char *argv[])
 	files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
 	char currentPath[MAXBUFSIZE];
 	getcwd(currentPath,MAXBUFSIZE);			//读取当前路径
-	printf("current path : %s\n",currentPath);
-	readFile(currentPath);					//读取数据
 	const char para[] = "-l";
-	if( argc==2 )
+	if( argc > 1 )
 	{
-		strcmp(argv[1],para)==0;
-		long_printf();
-	}
-	else if( argc!=1 )
-	{
-		int i;
-		for( i = 0 ; i < fileNum ; ++i )	//free内存空间
+		if(strcmp(argv[1],para)==0)
 		{
-			free(files[i]->permission);
-			free(files[i]->name);
-			free(files[i]);
+			readFile(currentPath);					//读取数据
+			printf("current path : %s\n",currentPath);
+			long_printf();
 		}
-		printf("Invalid parameter!\n");
+		else
+			printf("Invalid parameter!\n");
 	}
 	else
 	{
+		isLong = 0;
+		readFile(currentPath);					//读取数据
+		printf("current path : %s\n",currentPath);
 		simple_print();
 	}
 	free(files);							//释放结构体组指针所占的内存空间
