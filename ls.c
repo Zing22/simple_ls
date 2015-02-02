@@ -134,6 +134,7 @@ int readFile(const char *path)
 	return 0;
 }
 
+//	长输出
 int long_printf()
 {
 	int i;
@@ -147,6 +148,7 @@ int long_printf()
 	return 0;
 }
 
+//	短输出
 int simple_print()
 {
 	int i;
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
 	char currentPath[MAXBUFSIZE];
 	getcwd(currentPath,MAXBUFSIZE);											//读取当前路径
 	printf("current path : %s\n",currentPath);
-	readFile(currentPath);
+	readFile(currentPath);													//读取数据
 	const char para[] = "-l";
 	if( argc==2 )
 	{
@@ -176,7 +178,7 @@ int main(int argc, char *argv[])
 	else if( argc!=1 )
 	{
 		int i;
-		for( i = 0 ; i < fileNum ; ++i )										//输出并且free内存空间
+		for( i = 0 ; i < fileNum ; ++i )									//free内存空间
 		{
 			free(files[i]->permission);
 			free(files[i]->name);
