@@ -5,11 +5,11 @@
 #include    <string.h>
 #include    <malloc.h>
 #include    <sys/param.h>
-#include	<sys/stat.h>
+#include    <sys/stat.h>
 #include    <grp.h>
 #include    <pwd.h>
 #include    <sys/types.h>
-#include	<stddef.h>
+#include    <stddef.h>
 #include    <time.h>
 
 #define     MAXBUFSIZE PATH_MAX
@@ -102,33 +102,32 @@ int readFile(const char *path)
 	DIR	*dir = NULL;
 	struct dirent *ptr = NULL;
 	dir = opendir(path);
-	//size_t memSize = INITSIZE*sizeof(char*);
 	size_t sum = 0;				//已经存储的文件数量
 
 	while((ptr=readdir(dir)) != NULL)
 	{
-		size_t length = strlen(ptr->d_name);								//ptr->d_name 的大小
+		size_t length = strlen(ptr->d_name);	//ptr->d_name 的大小
 		if(ptr->d_name[0] == '.')
 			continue;
 
-		if( length > w_name )												//更新最大文件名长度
+		if( length > w_name )					//更新最大文件名长度
 			w_name = length;
 
 		files[fileNum]=(struct Filelist*)malloc(sizeof(struct Filelist));	//为每一个结构体开辟内存空间
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
 		strncpy(files[fileNum]->name,ptr->d_name,length);
-		readAll(path,files[fileNum]->name,fileNum);							//读写其他文件属性数据
+		readAll(path,files[fileNum]->name,fileNum);			//读写其他文件属性数据
 		++fileNum;
 		sum = fileNum * sizeof(char*);
-		if( fileNum >= maxNum/2 )											//使结构体组指针内存空间翻倍
+		if( fileNum >= maxNum/2 )				//使结构体组指针内存空间翻倍
 		{
 			maxNum *= 2;
 			files = (struct Filelist**)realloc(files,sizeof(struct Filelist*)*maxNum);
 		}
 	}
 
-	qsort(files,fileNum,sizeof(files[0]),mycmp);							//按文件名升序排序
+	qsort(files,fileNum,sizeof(files[0]),mycmp);	//按文件名升序排序
 
 	closedir(dir);
 	return 0;
@@ -138,7 +137,7 @@ int readFile(const char *path)
 int long_printf()
 {
 	int i;
-	for( i = 0 ; i < fileNum ; ++i )										//输出并且free内存空间
+	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
 		printf("%s %*i %*s %*s %*i %*s %-*s\n",files[i]->permission, w_nlink, files[i]->nlink, w_uid, files[i]->uid, w_gid, files[i]->gid, w_size, files[i]->filelength, w_time, files[i]->mtime, w_name, files[i]->name);
 		free(files[i]->permission);
@@ -152,7 +151,7 @@ int long_printf()
 int simple_print()
 {
 	int i;
-	for( i = 0 ; i < fileNum ; ++i )										//输出并且free内存空间
+	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
 		printf("%s\n",files[i]->name);
 		free(files[i]->permission);
@@ -166,9 +165,9 @@ int main(int argc, char *argv[])
 {
 	files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
 	char currentPath[MAXBUFSIZE];
-	getcwd(currentPath,MAXBUFSIZE);											//读取当前路径
+	getcwd(currentPath,MAXBUFSIZE);			//读取当前路径
 	printf("current path : %s\n",currentPath);
-	readFile(currentPath);													//读取数据
+	readFile(currentPath);					//读取数据
 	const char para[] = "-l";
 	if( argc==2 )
 	{
@@ -178,7 +177,7 @@ int main(int argc, char *argv[])
 	else if( argc!=1 )
 	{
 		int i;
-		for( i = 0 ; i < fileNum ; ++i )									//free内存空间
+		for( i = 0 ; i < fileNum ; ++i )	//free内存空间
 		{
 			free(files[i]->permission);
 			free(files[i]->name);
@@ -190,6 +189,6 @@ int main(int argc, char *argv[])
 	{
 		simple_print();
 	}
-	free(files);															//释放结构体组指针所占的内存空间
+	free(files);							//释放结构体组指针所占的内存空间
 	exit(0);
 }
