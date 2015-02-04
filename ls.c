@@ -45,7 +45,7 @@ unsigned int tempLen=0;
 int readAll(char *filename,int filenum)
 {
 	//stat函数获取文件属性
-	stat(filename,&buf);
+	lstat(filename,&buf);
 
 	//size of file
 	files[filenum]->filelength = buf.st_size;
@@ -96,7 +96,7 @@ int readAll(char *filename,int filenum)
 	//mtime of file
 	mtm = localtime(&buf.st_mtim.tv_sec);
 	if(strcmp(getenv("LANG"),"zh_CN.UTF-8")==0)
-		strftime(files[filenum]->mtime,128,"%m %e %R",mtm);
+		strftime(files[filenum]->mtime,128,"%m月 %e %R",mtm);
 	else
 		strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
@@ -120,6 +120,11 @@ int readFile(const char *path)
 		if( length > w_name )					//更新最大文件名长度
 			w_name = length;
 
+		if( fileNum == maxNum )				//使结构体组指针内存空间翻倍
+		{
+			maxNum *= 2;
+			files = (struct Filelist**)realloc(files,sizeof(struct Filelist*)*maxNum);
+		}
 		files[fileNum]=(struct Filelist*)malloc(sizeof(struct Filelist));	//为每一个结构体开辟内存空间
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
@@ -127,11 +132,6 @@ int readFile(const char *path)
 		if(isLong)
 			readAll(files[fileNum]->name,fileNum);			//读写其他文件属性数据
 		++fileNum;
-		if( fileNum == maxNum )				//使结构体组指针内存空间翻倍
-		{
-			maxNum *= 2;
-			files = (struct Filelist**)realloc(files,sizeof(struct Filelist*)*maxNum);
-		}
 	}
 
 	qsort(files,fileNum,sizeof(files[0]),mycmp);	//按文件名升序排序
@@ -174,14 +174,11 @@ int simple_print()
 int main(int argc, char *argv[])
 {
 	files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
-	char currentPath[PATH_MAX];
-	getcwd(currentPath,PATH_MAX);			//读取当前路径
 	if( argc > 1 )
 	{
 		if(strcmp(argv[1],"-l")==0)
 		{
-			readFile(currentPath);					//读取数据
-			printf("current path : %s\n",currentPath);
+			readFile(".");					//读取数据
 			long_printf();
 		}
 		else
@@ -190,8 +187,7 @@ int main(int argc, char *argv[])
 	else
 	{
 		isLong = 0;
-		readFile(currentPath);					//读取数据
-		printf("current path : %s\n",currentPath);
+		readFile(".");					//读取数据
 		simple_print();
 	}
 	free(files);							//释放结构体组指针所占的内存空间
