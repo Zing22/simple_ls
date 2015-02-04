@@ -17,6 +17,8 @@
 unsigned int w_nlink,w_uid,w_gid,w_size,w_time,w_name;
 //	是否为长输出
 unsigned int isLong = 1;
+//	块总占用数
+unsigned long total = 0;
 
 struct Filelist
 {
@@ -101,6 +103,10 @@ int readAll(char *filename,int filenum)
 		strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
 
+	//total
+	total += buf.st_blocks;
+	//test
+	//printf("block:%ld || blksize:%ld || name:%s\n",buf.st_blocks,buf.st_blksize,files[filenum]->name);
 	return 0;
 }
 
@@ -143,6 +149,10 @@ int readFile(const char *path)
 //	长输出
 int long_printf()
 {
+	if(strcmp(getenv("LANGUAGE"),"zh_CN:zh")==0)
+		printf("总用量 %ld\n",total/2);
+	else
+		printf("total %ld\n",total/2);
 	int i;
 	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
