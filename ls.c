@@ -10,6 +10,9 @@
 #include    <sys/types.h>
 #include    <stddef.h>
 #include    <time.h>
+#include    <locale.h>
+#include    <sys/ioctl.h>
+#include    <termios.h>
 
 #define     INITNUMBER 4
 
@@ -79,7 +82,6 @@ int readAll(char *filename,int filenum)
 	if(buf.st_mode & S_IROTH) files[filenum]->permission[7] = 'r';
 	if(buf.st_mode & S_IWOTH) files[filenum]->permission[8] = 'w';
 	if(buf.st_mode & S_IXOTH) files[filenum]->permission[9] = 'x';
-
 	if(buf.st_mode & S_ISUID) files[filenum]->permission[3] = 's';
 	if(buf.st_mode & S_ISGID) files[filenum]->permission[6] = 's';
 	if(buf.st_mode & S_ISVTX) files[filenum]->permission[9] = 't';
@@ -97,16 +99,12 @@ int readAll(char *filename,int filenum)
 	if(strlen(files[filenum]->gid) > w_gid) w_gid = strlen(files[filenum]->gid);
 	//mtime of file
 	mtm = localtime(&buf.st_mtim.tv_sec);
-	if(strcmp(getenv("LANG"),"zh_CN.UTF-8")==0)
-		strftime(files[filenum]->mtime,128,"%m月 %e %R",mtm);
-	else
-		strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
+	setlocale(LC_TIME,"");
+	strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
 
 	//total
 	total += buf.st_blocks;
-	//test
-	//printf("block:%ld || blksize:%ld || name:%s\n",buf.st_blocks,buf.st_blksize,files[filenum]->name);
 	return 0;
 }
 
@@ -156,8 +154,13 @@ int long_printf()
 	int i;
 	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
-		printf("%s %*i %*s %*s %*i %*s %-*s\n",files[i]->permission, w_nlink, files[i]->nlink, w_uid, files[i]->uid,
-					w_gid, files[i]->gid, w_size, files[i]->filelength, w_time, files[i]->mtime, w_name, files[i]->name);
+		printf("%s %*i %*s %*s %*i %*s %-*s\n",
+				files[i]->permission, w_nlink, 
+				files[i]->nlink, w_uid, files[i]->uid,
+				w_gid, files[i]->gid, w_size, 
+				files[i]->filelength, w_time,
+				files[i]->mtime, w_name, 
+				files[i]->name);
 		free(files[i]->name);
 		free(files[i]);
 	}
@@ -167,17 +170,30 @@ int long_printf()
 //	短输出
 int simple_print()
 {
-	int i;
-	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
+	int maxColumn=0;
+	struct winsize size;
+	ioctl(STDIN_FILENO,TIOCGWINSZ,&size);
+	maxColumn = size.ws_col;
+	int colNum = maxColumn / (w_name+2);
+	int rowNum = (fileNum+colNum-1) / colNum;
+	int r,c;
+	int temp;
+	for( r=0 ; r<rowNum ; ++r )
 	{
-		printf("%-*s",w_name+2,files[i]->name);
-		free(files[i]->name);
-		free(files[i]);
-		if( (i+1)%10==0 )
-			printf("\n");
-	}
-	if( i % 10 != 0 )
+		for( c=0 ; c<colNum ; ++c )
+		{
+			temp = c*rowNum+r+1;
+			if(temp<fileNum)
+			{
+				printf("%-*s",w_name+2,files[temp]->name);
+				free(files[temp]->name);
+				free(files[temp]);
+			}
+			else
+				printf("%-*s",w_name," ");
+		}
 		printf("\n");
+	}
 	return 0;
 }
 
