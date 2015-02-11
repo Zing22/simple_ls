@@ -31,6 +31,7 @@ struct Filelist
 	int nlink;
 	char *uid,*gid;
 	char mtime[128];
+	char linkTo[255];
 };
 struct Filelist **files = NULL;	//用于储存数据的结构体组的指针files
 int maxNum = INITNUMBER;		//当前能存储的最大文件数量
@@ -102,7 +103,9 @@ int readAll(char *filename,int filenum)
 	setlocale(LC_TIME,"");
 	strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
-
+	//readlink
+	if( files[filenum]->permission[0]=='l' )
+		readlink(filename,files[filenum]->linkTo,sizeof(char)*255);
 	//total
 	total += buf.st_blocks;
 	return 0;
@@ -154,13 +157,17 @@ int long_printf()
 	int i;
 	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
-		printf("%s %*i %*s %*s %*i %*s %-*s\n",
+		printf("%s %*i %*s %*s %*i %*s %-s",
 				files[i]->permission, w_nlink, 
 				files[i]->nlink, w_uid, files[i]->uid,
 				w_gid, files[i]->gid, w_size, 
 				files[i]->filelength, w_time,
-				files[i]->mtime, w_name, 
+				files[i]->mtime,
 				files[i]->name);
+		if( files[i]->permission[0]=='l' )
+		  printf(" -> %s\n",files[i]->linkTo);
+		else
+		  printf("\n");
 		free(files[i]->name);
 		free(files[i]);
 	}
@@ -182,7 +189,7 @@ int simple_print()
 	{
 		for( c=0 ; c<colNum ; ++c )
 		{
-			temp = c*rowNum+r+1;
+			temp = c*rowNum+r;
 			if(temp<fileNum)
 			{
 				printf("%-*s",w_name+2,files[temp]->name);
@@ -202,7 +209,7 @@ int main(int argc, char *argv[])
 	files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
 	if( argc > 1 )
 	{
-		if(strcmp(argv[1],"-l")==0)
+		if(strcmp(argv[1],"-l")==0)//这里vim提示我不要用argv[1]=="-l"...
 		{
 			readFile(".");					//读取数据
 			long_printf();
