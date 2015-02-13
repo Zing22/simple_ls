@@ -150,10 +150,7 @@ int readFile(const char *path)
 //	长输出
 int long_printf()
 {
-	if(strcmp(getenv("LANGUAGE"),"zh_CN:zh")==0)
-		printf("总用量 %ld\n",total/2);
-	else
-		printf("total %ld\n",total/2);
+	printf("total %ld\n",total/2);
 	int i;
 	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
 	{
