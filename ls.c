@@ -31,7 +31,7 @@ struct Filelist
 	int nlink;
 	char *uid,*gid;
 	char mtime[128];
-	char linkTo[255];
+	char *linkTo;
 };
 struct Filelist **files = NULL;	//用于储存数据的结构体组的指针files
 int maxNum = INITNUMBER;		//当前能存储的最大文件数量
@@ -47,6 +47,7 @@ struct passwd *data1 = NULL;
 struct group *data2 = NULL;
 struct tm *mtm = NULL;
 unsigned int tempLen=0;
+ssize_t sz=0;
 //读取文件属性数据
 int readAll(char *filename,int filenum)
 {
@@ -99,13 +100,17 @@ int readAll(char *filename,int filenum)
 	if(strlen(files[filenum]->uid) > w_uid) w_uid = strlen(files[filenum]->uid);
 	if(strlen(files[filenum]->gid) > w_gid) w_gid = strlen(files[filenum]->gid);
 	//mtime of file
-	mtm = localtime(&buf.st_mtim.tv_sec);
+	mtm = localtime(&buf.st_mtime);
 	setlocale(LC_TIME,"");
 	strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
 	//readlink
 	if( files[filenum]->permission[0]=='l' )
-		readlink(filename,files[filenum]->linkTo,sizeof(char)*255);
+	{
+		files[filenum]->linkTo = (char*)malloc(buf.st_size+1);
+		sz = readlink(filename,files[filenum]->linkTo,buf.st_size+1);
+		files[filenum]->linkTo[sz] = '\0';
+	}
 	//total
 	total += buf.st_blocks;
 	return 0;
@@ -162,7 +167,10 @@ int long_printf()
 				files[i]->mtime,
 				files[i]->name);
 		if( files[i]->permission[0]=='l' )
-		  printf(" -> %s\n",files[i]->linkTo);
+		{
+			printf(" -> %s\n",files[i]->linkTo);
+			free(files[i]->linkTo);
+		}
 		else
 		  printf("\n");
 		free(files[i]->name);
