@@ -32,6 +32,7 @@ struct Filelist
 	char *uid,*gid;
 	char mtime[128];
 	char *linkTo;
+	unsigned int chinese;
 };
 struct Filelist **files = NULL;	//用于储存数据的结构体组的指针files
 int maxNum = INITNUMBER;		//当前能存储的最大文件数量
@@ -40,6 +41,21 @@ int maxNum = INITNUMBER;		//当前能存储的最大文件数量
 int mycmp(const void *a,const void *b)
 {
 	return strcasecmp((*(struct Filelist**)a)->name,(*(struct Filelist**)b)->name);
+}
+
+unsigned int realLenth(const char ch[],const size_t oldLength)
+{
+	unsigned int chinese=0;
+	size_t i=0;
+	for( ;i<oldLength;++i)
+	{
+		if( ch[i]<0 )
+		{
+			chinese++;
+			i+=2;
+		}
+	}
+	return chinese;
 }
 
 struct stat buf;
@@ -117,6 +133,7 @@ int readAll(char *filename,int filenum)
 }
 
 int fileNum = 0;
+size_t length;
 int readFile(const char *path)
 {
 	DIR	*dir = NULL;
@@ -125,9 +142,11 @@ int readFile(const char *path)
 
 	while((ptr=readdir(dir)) != NULL)
 	{
-		size_t length = strlen(ptr->d_name);	//ptr->d_name 的大小
 		if(ptr->d_name[0] == '.')
 			continue;
+
+		//length = realLenth(ptr->d_name,strlen(ptr->d_name));	//ptr->d_name 的大小
+		length = strlen(ptr->d_name);
 
 		if( length > w_name )					//更新最大文件名长度
 			w_name = length;
@@ -141,6 +160,7 @@ int readFile(const char *path)
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
 		strncpy(files[fileNum]->name,ptr->d_name,length);
+		files[fileNum]->chinese = realLenth(ptr->d_name,length);
 		if(isLong)
 			readAll(files[fileNum]->name,fileNum);			//读写其他文件属性数据
 		++fileNum;
@@ -197,7 +217,7 @@ int simple_print()
 			temp = c*rowNum+r;
 			if(temp<fileNum)
 			{
-				printf("%-*s",w_name+2,files[temp]->name);
+				printf("%-*s",w_name+files[temp]->chinese+2,files[temp]->name);
 				free(files[temp]->name);
 				free(files[temp]);
 			}
