@@ -19,7 +19,7 @@
 //	各个数据的宽度
 unsigned int w_nlink,w_uid,w_gid,w_size,w_time,w_name;
 //	是否为长输出
-unsigned int isLong = 1;
+unsigned int isLong = 0;
 //	块总占用数
 unsigned long total = 0;
 
@@ -65,7 +65,7 @@ struct tm *mtm = NULL;
 unsigned int tempLen=0;
 ssize_t sz=0;
 //读取文件属性数据
-int readAll(char *filename,int filenum)
+int readAll(char *filename,int filenum,struct Filelist** files)
 {
 	//stat函数获取文件属性
 	lstat(filename,&buf);
@@ -138,8 +138,10 @@ int readFile(const char *path)
 {
 	DIR	*dir = NULL;
 	struct dirent *ptr = NULL;
+	char *temName = NULL;
 	dir = opendir(path);
-
+	maxNum = INITNUMBER;
+	fileNum=0;
 	while((ptr=readdir(dir)) != NULL)
 	{
 		if(ptr->d_name[0] == '.')
@@ -162,7 +164,20 @@ int readFile(const char *path)
 		strncpy(files[fileNum]->name,ptr->d_name,length);
 		files[fileNum]->chinese = realLenth(ptr->d_name,length);
 		if(isLong)
-			readAll(files[fileNum]->name,fileNum);			//读写其他文件属性数据
+		{
+			if(strcmp(path,".")==0)
+				readAll(files[fileNum]->name,fileNum,files);			//读写其他文件属性数据
+			else
+			{
+				temName = (char *)malloc(sizeof(char)*(strlen(files[fileNum]->name)+strlen(path)+3));
+				memset(temName,'\0',(strlen(files[fileNum]->name)+strlen(path)+3));
+				strcpy(temName,path);
+				strcat(temName,"/");
+				strcat(temName,files[fileNum]->name);
+				readAll(temName,fileNum,files);
+				free(temName);
+			}	
+		}
 		++fileNum;
 	}
 
@@ -173,41 +188,41 @@ int readFile(const char *path)
 }
 
 //	长输出
-int long_printf()
+int long_printf(struct Filelist** list,int num)
 {
 	printf("total %ld\n",total/2);
 	int i;
-	for( i = 0 ; i < fileNum ; ++i )				//输出并且free内存空间
+	for( i = 0 ; i < num ; ++i )				//输出并且free内存空间
 	{
 		printf("%s %*i %*s %*s %*i %*s %-s",
-				files[i]->permission, w_nlink, 
-				files[i]->nlink, w_uid, files[i]->uid,
-				w_gid, files[i]->gid, w_size, 
-				files[i]->filelength, w_time,
-				files[i]->mtime,
-				files[i]->name);
-		if( files[i]->permission[0]=='l' )
+				list[i]->permission, w_nlink, 
+				list[i]->nlink, w_uid, list[i]->uid,
+				w_gid, list[i]->gid, w_size, 
+				list[i]->filelength, w_time,
+				list[i]->mtime,
+				list[i]->name);
+		if( list[i]->permission[0]=='l' )
 		{
-			printf(" -> %s\n",files[i]->linkTo);
-			free(files[i]->linkTo);
+			printf(" -> %s\n",list[i]->linkTo);
+			free(list[i]->linkTo);
 		}
 		else
 		  printf("\n");
-		free(files[i]->name);
-		free(files[i]);
+		free(list[i]->name);
+		free(list[i]);
 	}
 	return 0;
 }
 
 //	短输出
-int simple_print()
+int simple_print(struct Filelist** list,int num)
 {
 	int maxColumn=0;
 	struct winsize size;
 	ioctl(STDIN_FILENO,TIOCGWINSZ,&size);
 	maxColumn = size.ws_col;
 	int colNum = maxColumn / (w_name+2);
-	int rowNum = (fileNum+colNum-1) / colNum;
+	int rowNum = (num+colNum-1) / colNum;
 	int r,c;
 	int temp;
 	for( r=0 ; r<rowNum ; ++r )
@@ -215,11 +230,11 @@ int simple_print()
 		for( c=0 ; c<colNum ; ++c )
 		{
 			temp = c*rowNum+r;
-			if(temp<fileNum)
+			if(temp<num)
 			{
-				printf("%-*s",w_name+files[temp]->chinese+2,files[temp]->name);
-				free(files[temp]->name);
-				free(files[temp]);
+				printf("%-*s",w_name+list[temp]->chinese+2,list[temp]->name);
+				free(list[temp]->name);
+				free(list[temp]);
 			}
 			else
 				printf("%-*s",w_name," ");
@@ -229,25 +244,109 @@ int simple_print()
 	return 0;
 }
 
-int main(int argc, char *argv[])
+
+
+int main(int argc,char *argv[])
 {
-	files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
-	if( argc > 1 )
+	int i,fiNum=0,dirNum=0;
+	char **fiList = (char**)malloc(argc*sizeof(char*));
+	char **dirList = (char**)malloc(argc*sizeof(char*));
+	struct stat info;
+	int len=0;
+	for( i=1 ; i<argc ; ++i )
 	{
-		if(strcmp(argv[1],"-l")==0)//这里vim提示我不要用argv[1]=="-l"...
+		if(!isLong)
 		{
-			readFile(".");					//读取数据
-			long_printf();
+			if(strcmp(argv[i],"-l")==0)
+			{
+				isLong=1;
+				continue;
+			}
+		}
+		if(stat(argv[i],&info)==0)
+		{
+			if(S_ISDIR(info.st_mode))
+			{
+				len = strlen(argv[i]);
+				dirList[dirNum] = (char *)malloc(sizeof(char)*(len+1));
+				memset(dirList[dirNum],'\0',sizeof(char)*(len+1));
+				strncpy(dirList[dirNum],argv[i],len+1);
+				dirNum++;
+			}
+			else
+			{
+				len = strlen(argv[i]);
+				fiList[fiNum] = (char *)malloc(sizeof(char)*(len+1));
+				memset(fiList[fiNum],'\0',sizeof(char)*(len+1));
+				strncpy(fiList[fiNum],argv[i],len+1);
+				fiNum++;
+			}
 		}
 		else
-			printf("Invalid parameter!\n");
+			if(strcmp(argv[i],"-l")==0)
+				printf("%s is an invalid parameter!\n",argv[i]);
+	}
+	
+	if( fiNum+dirNum==0 )
+	{
+		files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
+		readFile(".");
+		if(isLong)
+		{
+			long_printf(files,fileNum);
+		}
+		else simple_print(files,fileNum);
+		free(files);							//释放结构体组指针所占的内存空间
 	}
 	else
 	{
-		isLong = 0;
-		readFile(".");					//读取数据
-		simple_print();
+		unsigned int temLen;
+		if( fiNum )
+		{
+			struct Filelist **temList = (struct Filelist **)malloc(sizeof(struct Filelist*)*fiNum);//初始化结构体组指针的内存空间
+			for( i=0 ; i<fiNum ; ++i )
+			{
+				temLen = strlen(fiList[i]);
+				if(w_name<temLen) w_name = temLen;
+				temList[i] = (struct Filelist *)malloc(sizeof(struct Filelist));
+				temList[i]->name = (char *)malloc(sizeof(char)*(temLen+1));
+				memset(temList[i]->name,'\0',(temLen+1)*sizeof(char));
+				strncpy(temList[i]->name,fiList[i],temLen);
+				temList[i]->chinese = realLenth(fiList[i],tempLen);
+				free(fiList[i]);
+				readAll(temList[i]->name,i,temList);
+			}
+			
+			qsort(temList,fiNum,sizeof(temList[0]),mycmp);	//按文件名升序排序
+
+			if(isLong)
+				long_printf(temList,fiNum);
+			else
+				simple_print(temList,fiNum);
+			
+			free(temList);
+			w_name=0;
+		}
+		if( dirNum )
+		{
+			for( i=0 ; i<dirNum ; ++i )
+			{
+				files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
+				readFile(dirList[i]);
+				if(fiNum+dirNum>1)
+					printf("%s:\n",dirList[i]);
+				if(isLong)
+					long_printf(files,fileNum);
+				else
+					simple_print(files,fileNum);
+				free(files);
+				free(dirList[i]);
+				w_nlink=w_uid=w_gid=w_size=w_time=w_name=total=0;
+			}
+		}
 	}
-	free(files);							//释放结构体组指针所占的内存空间
+
+	free(fiList);
+	free(dirList);
 	return 0;
 }
