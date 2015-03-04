@@ -23,6 +23,10 @@ unsigned int w_nlink,w_uid,w_gid,w_size,w_time,w_name;
 unsigned int isLong = 0;
 //	块总占用数
 unsigned long total = 0;
+//  是否显示隐藏文件
+unsigned int f_printAll = 0;
+//  是否反向排序
+unsigned int isReverse = 0;
 
 struct Filelist
 {
@@ -41,7 +45,10 @@ int maxNum = INITNUMBER;		//当前能存储的最大文件数量
 //结构体排序所用参数函数
 int mycmp(const void *a,const void *b)
 {
-	return strcasecmp((*(struct Filelist**)a)->name,(*(struct Filelist**)b)->name);
+	if (isReverse == 0)
+		return strcasecmp((*(struct Filelist**)a)->name,(*(struct Filelist**)b)->name);
+	else
+		return strcasecmp((*(struct Filelist**)b)->name,(*(struct Filelist**)a)->name);
 }
 
 wchar_t temp[256];
@@ -140,7 +147,7 @@ int readFile(const char *path)
 	fileNum=0;
 	while((ptr=readdir(dir)) != NULL)
 	{
-		if(ptr->d_name[0] == '.')
+		if(ptr->d_name[0] == '.' && !f_printAll)
 			continue;
 
 		//length = realLenth(ptr->d_name,strlen(ptr->d_name));	//ptr->d_name 的大小
@@ -256,7 +263,23 @@ int main(int argc,char *argv[])
 		{
 			if(strcmp(argv[i],"-l")==0)
 			{
-				isLong=1;
+				isLong = 1;
+				continue;
+			}
+		}
+		if(!isReverse)
+		{
+			if(strcmp(argv[i],"-r")==0)
+			{
+				isReverse = 1;
+				continue;
+			}
+		}
+		if(!f_printAll)
+		{
+			if( strcmp(argv[i],"-a")==0 )
+			{
+				f_printAll = 1;
 				continue;
 			}
 		}
@@ -326,6 +349,7 @@ int main(int argc,char *argv[])
 		}
 		if( dirNum )
 		{
+			qsort(dirList,dirNum,sizeof(dirList[0]),mycmp);
 			for( i=0 ; i<dirNum ; ++i )
 			{
 				files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
