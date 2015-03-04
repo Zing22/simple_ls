@@ -13,6 +13,7 @@
 #include    <locale.h>
 #include    <sys/ioctl.h>
 #include    <termios.h>
+#include    <wchar.h>
 
 #define     INITNUMBER 4
 
@@ -32,7 +33,7 @@ struct Filelist
 	char *uid,*gid;
 	char mtime[128];
 	char *linkTo;
-	unsigned int chinese;
+	int column;
 };
 struct Filelist **files = NULL;	//用于储存数据的结构体组的指针files
 int maxNum = INITNUMBER;		//当前能存储的最大文件数量
@@ -43,19 +44,14 @@ int mycmp(const void *a,const void *b)
 	return strcasecmp((*(struct Filelist**)a)->name,(*(struct Filelist**)b)->name);
 }
 
-unsigned int realLenth(const char ch[],const size_t oldLength)
+wchar_t temp[256];
+int nameColumn(char * const name)
 {
-	unsigned int chinese=0;
-	size_t i=0;
-	for( ;i<oldLength;++i)
-	{
-		if( ch[i]<0 )
-		{
-			chinese++;
-			i+=2;
-		}
-	}
-	return chinese;
+	setlocale(LC_ALL,"");
+	if( mbstowcs(temp,name,256*sizeof(wchar_t))!=(size_t)-1 )
+		return wcswidth(temp,sizeof(wchar_t)*256);
+	printf("mbstowcs error!\n");
+	return -1;
 }
 
 struct stat buf;
@@ -162,7 +158,7 @@ int readFile(const char *path)
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
 		strncpy(files[fileNum]->name,ptr->d_name,length);
-		files[fileNum]->chinese = realLenth(ptr->d_name,length);
+		files[fileNum]->column = nameColumn(ptr->d_name);
 		if(isLong)
 		{
 			if(strcmp(path,".")==0)
@@ -232,7 +228,8 @@ int simple_print(struct Filelist** list,int num)
 			temp = c*rowNum+r;
 			if(temp<num)
 			{
-				printf("%-*s",w_name+list[temp]->chinese+2,list[temp]->name);
+				printf("%-s",list[temp]->name);
+				printf("%*s",w_name-list[temp]->column+2,"");
 				free(list[temp]->name);
 				free(list[temp]);
 			}
@@ -283,8 +280,8 @@ int main(int argc,char *argv[])
 			}
 		}
 		else
-			if(strcmp(argv[i],"-l")==0)
-				printf("%s is an invalid parameter!\n",argv[i]);
+			if(strcmp(argv[i],"-l")!=0)
+				printf("\"%s\" is an invalid parameter!\n",argv[i]);
 	}
 	
 	if( fiNum+dirNum==0 )
@@ -312,7 +309,7 @@ int main(int argc,char *argv[])
 				temList[i]->name = (char *)malloc(sizeof(char)*(temLen+1));
 				memset(temList[i]->name,'\0',(temLen+1)*sizeof(char));
 				strncpy(temList[i]->name,fiList[i],temLen);
-				temList[i]->chinese = realLenth(fiList[i],tempLen);
+				temList[i]->column = nameColumn(temList[i]->name);
 				free(fiList[i]);
 				readAll(temList[i]->name,i,temList);
 			}
