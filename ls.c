@@ -51,10 +51,17 @@ int mycmp(const void *a,const void *b)
 		return strcasecmp((*(struct Filelist**)b)->name,(*(struct Filelist**)a)->name);
 }
 
-wchar_t temp[256];
-int nameColumn(char * const name)
+int dir_cmp(const void *a,const void *b)
 {
-	setlocale(LC_ALL,"");
+	if (isReverse == 0)
+		return strcasecmp((char *)a,(char *)b);
+	else
+		return strcasecmp((char *)b,(char *)a);
+}
+
+wchar_t temp[256];
+int name_width(char * const name)
+{
 	if( mbstowcs(temp,name,256*sizeof(wchar_t))!=(size_t)-1 )
 		return wcswidth(temp,sizeof(wchar_t)*256);
 	printf("mbstowcs error!\n");
@@ -120,7 +127,6 @@ int readAll(char *filename,int filenum,struct Filelist** files)
 	if(strlen(files[filenum]->gid) > w_gid) w_gid = strlen(files[filenum]->gid);
 	//mtime of file
 	mtm = localtime(&buf.st_mtime);
-	setlocale(LC_TIME,"");
 	strftime(files[filenum]->mtime,128,"%b %e %R",mtm);
 	if(strlen(files[filenum]->mtime) > w_time) w_time = strlen(files[filenum]->mtime);
 	//readlink
@@ -165,7 +171,7 @@ int readFile(const char *path)
 		files[fileNum]->name = (char*)malloc((length+1)*sizeof(char));		//为每个文件名C-sting开辟内存空间
 		memset(files[fileNum]->name,'\0',(length+1)*sizeof(char));
 		strncpy(files[fileNum]->name,ptr->d_name,length);
-		files[fileNum]->column = nameColumn(ptr->d_name);
+		files[fileNum]->column = name_width(ptr->d_name);
 		if(isLong)
 		{
 			if(strcmp(path,".")==0)
@@ -248,9 +254,7 @@ int simple_print(struct Filelist** list,int num)
 	return 0;
 }
 
-
-
-int main(int argc,char *argv[])
+int dealArgv(int argc,char *argv[])
 {
 	int i,fiNum=0,dirNum=0;
 	char **fiList = (char**)malloc(argc*sizeof(char*));
@@ -259,30 +263,6 @@ int main(int argc,char *argv[])
 	int len=0;
 	for( i=1 ; i<argc ; ++i )
 	{
-		if(!isLong)
-		{
-			if(strcmp(argv[i],"-l")==0)
-			{
-				isLong = 1;
-				continue;
-			}
-		}
-		if(!isReverse)
-		{
-			if(strcmp(argv[i],"-r")==0)
-			{
-				isReverse = 1;
-				continue;
-			}
-		}
-		if(!f_printAll)
-		{
-			if( strcmp(argv[i],"-a")==0 )
-			{
-				f_printAll = 1;
-				continue;
-			}
-		}
 		if(stat(argv[i],&info)==0)
 		{
 			if(S_ISDIR(info.st_mode))
@@ -303,8 +283,8 @@ int main(int argc,char *argv[])
 			}
 		}
 		else
-			if(strcmp(argv[i],"-l")!=0)
-				printf("\"%s\" is an invalid parameter!\n",argv[i]);
+			if(strcmp(argv[i],"")!=0)
+				printf("\"%s\" No such file or directory!\n",argv[i]);
 	}
 	
 	if( fiNum+dirNum==0 )
@@ -332,7 +312,7 @@ int main(int argc,char *argv[])
 				temList[i]->name = (char *)malloc(sizeof(char)*(temLen+1));
 				memset(temList[i]->name,'\0',(temLen+1)*sizeof(char));
 				strncpy(temList[i]->name,fiList[i],temLen);
-				temList[i]->column = nameColumn(temList[i]->name);
+				temList[i]->column = name_width(temList[i]->name);
 				free(fiList[i]);
 				readAll(temList[i]->name,i,temList);
 			}
@@ -349,7 +329,7 @@ int main(int argc,char *argv[])
 		}
 		if( dirNum )
 		{
-			qsort(dirList,dirNum,sizeof(dirList[0]),mycmp);
+			qsort(dirList,dirNum,sizeof(dirList[0]),dir_cmp);
 			for( i=0 ; i<dirNum ; ++i )
 			{
 				files = (struct Filelist **)malloc(sizeof(struct Filelist*)*INITNUMBER);//初始化结构体组指针的内存空间
@@ -369,5 +349,46 @@ int main(int argc,char *argv[])
 
 	free(fiList);
 	free(dirList);
+	return 0;
+}
+
+
+
+int main(int argc,char *argv[])
+{
+	setlocale(LC_ALL,"");
+	setlocale(LC_TIME,"");
+	int i;
+	for( i=1 ; i<argc ; ++i )
+	{
+		if(!isLong)
+		{
+			if(strcmp(argv[i],"-l")==0)
+			{
+				isLong = 1;
+				strcpy(argv[i],"");
+				continue;
+			}
+		}
+		if(!isReverse)
+		{
+			if(strcmp(argv[i],"-r")==0)
+			{
+				isReverse = 1;
+				strcpy(argv[i],"");
+				continue;
+			}
+		}
+		if(!f_printAll)
+		{
+			if( strcmp(argv[i],"-a")==0 )
+			{
+				f_printAll = 1;
+				strcpy(argv[i],"");
+				continue;
+			}
+		}
+	}
+	dealArgv(argc,argv);
 	return 0;
 }
