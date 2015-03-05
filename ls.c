@@ -357,7 +357,6 @@ int dealArgv(int argc,char *argv[])
 int main(int argc,char *argv[])
 {
 	setlocale(LC_ALL,"");
-	setlocale(LC_TIME,"");
 	int i;
 	for( i=1 ; i<argc ; ++i )
 	{
