@@ -263,6 +263,21 @@ int dealArgv(int argc,char *argv[])
 	int len=0;
 	for( i=1 ; i<argc ; ++i )
 	{
+		if(strcmp(argv[i],"-l")==0)
+		{
+			isLong = 1;
+			continue;
+		}
+		if(strcmp(argv[i],"-r")==0)
+		{
+			isReverse = 1;
+			continue;
+		}
+		if( strcmp(argv[i],"-a")==0 )
+		{
+			f_printAll = 1;
+			continue;
+		}
 		if(stat(argv[i],&info)==0)
 		{
 			if(S_ISDIR(info.st_mode))
@@ -283,8 +298,7 @@ int dealArgv(int argc,char *argv[])
 			}
 		}
 		else
-			if(strcmp(argv[i],"")!=0)
-				printf("\"%s\" No such file or directory!\n",argv[i]);
+			printf("\"%s\" No such file or directory!\n",argv[i]);
 	}
 	
 	if( fiNum+dirNum==0 )
@@ -358,36 +372,6 @@ int main(int argc,char *argv[])
 {
 	setlocale(LC_ALL,"");
 	int i;
-	for( i=1 ; i<argc ; ++i )
-	{
-		if(!isLong)
-		{
-			if(strcmp(argv[i],"-l")==0)
-			{
-				isLong = 1;
-				strcpy(argv[i],"");
-				continue;
-			}
-		}
-		if(!isReverse)
-		{
-			if(strcmp(argv[i],"-r")==0)
-			{
-				isReverse = 1;
-				strcpy(argv[i],"");
-				continue;
-			}
-		}
-		if(!f_printAll)
-		{
-			if( strcmp(argv[i],"-a")==0 )
-			{
-				f_printAll = 1;
-				strcpy(argv[i],"");
-				continue;
-			}
-		}
-	}
 	dealArgv(argc,argv);
 	return 0;
 }
