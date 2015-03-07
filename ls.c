@@ -274,7 +274,8 @@ int readFile(const char *path)
 		}
 		++fileNum;
 	}
-	width_for_long(files,fileNum);
+	if(isLong)
+		width_for_long(files,fileNum);
 	//按文件名升序排序
 	qsort(files,fileNum,sizeof(files[0]),mycmp);
 	closedir(dir);
