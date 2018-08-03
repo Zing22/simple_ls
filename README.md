@@ -1,1 +1,1 @@
-This hub is used for learning.
+This repo is used for learning.
